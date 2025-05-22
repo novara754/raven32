@@ -1,0 +1,40 @@
+CAPI=2:
+name: ::raven32:1.1.1
+
+filesets:
+  rtl:
+    files:
+      - hdl/defs.sv
+      - hdl/hazard_unit.sv
+      - hdl/alu.sv
+      - hdl/control_unit.sv
+      - hdl/core.sv
+      - hdl/instruction_decoder.sv
+      - hdl/program_counter.sv
+      - hdl/register_file.sv
+      - hdl/word_memory.sv
+    file_type: systemVerilogSource
+
+  tb:
+    files:
+      - tb/core_tb.sv
+    file_type: systemVerilogSource
+    depend: [vlog_tb_utils]
+
+targets:
+  sim:
+    default_tool: verilator
+    filesets: [rtl, tb]
+    tools:
+      icarus:
+        iverilog_options: [-g2012]
+      verilator:
+        verilator_options: [--binary, -j, "0", --trace, --timescale, 1ns/1ns]
+    toplevel: core_tb
+    parameters:
+      - firmware
+
+parameters:
+  firmware:
+    datatype: str
+    paramtype: plusarg
