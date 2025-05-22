@@ -24,20 +24,23 @@ module instruction_decoder (
     assign o_rs1 = i_inst[19:15];
     assign o_rs2 = i_inst[24:20];
 
-    logic [31:0] imm_i;
+    logic [31:0] imm_i, imm_s, imm_b, imm_u, imm_j;
     assign imm_i = {{21{i_inst[31]}}, i_inst[30:20]};
+    assign imm_s = {{21{i_inst[31]}}, i_inst[30:25], i_inst[11:8], i_inst[7]};
+    assign imm_b = {{20{i_inst[31]}}, i_inst[7], i_inst[30:25], i_inst[11:8], 1'b0};
+    assign imm_u = {i_inst[31:12], 12'b0};
+    assign imm_j = {{12{i_inst[31]}}, i_inst[19:12], i_inst[20], i_inst[30:21], 1'b0};
 
     always_comb begin
         case (o_opcode)
-            OPCODE_STORE: o_imm = 0;
-            OPCODE_BRANCH: o_imm = 0;
-            OPCODE_JALR: o_imm = 0;
-            OPCODE_JAL: o_imm = 0;
+            OPCODE_LOAD: o_imm = imm_i;
+            OPCODE_STORE: o_imm = imm_s;
+            OPCODE_BRANCH: o_imm = imm_b;
+            OPCODE_JALR: o_imm = imm_i;
+            OPCODE_JAL: o_imm = imm_j;
             OPCODE_OP_IMM: o_imm = imm_i;
-            OPCODE_OP: o_imm = 0;
-            OPCODE_SYSTEM: o_imm = 0;
-            OPCODE_AUIPC: o_imm = 0;
-            OPCODE_LUI: o_imm = 0;
+            OPCODE_AUIPC: o_imm = imm_u;
+            OPCODE_LUI: o_imm = imm_u;
             default: o_imm = 0;
         endcase
     end

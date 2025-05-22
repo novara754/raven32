@@ -28,4 +28,15 @@ enum logic [3:0] {
     ALU_SRA
 } t_alu_op;
 
+enum logic [2:0] {
+    BRANCH_NEVER = 3'b011,
+    BRANCH_ALWAYS = 3'b010,
+    BRANCH_EQ = 3'b000,
+    BRANCH_NE = 3'b001,
+    BRANCH_LT = 3'b100,
+    BRANCH_GE = 3'b101,
+    BRANCH_LTU = 3'b110,
+    BRANCH_GEU = 3'b111
+} t_branch_cond;
+
 endpackage

@@ -4,6 +4,11 @@ module core (
     input i_clk,
     input i_rst
 );
+    logic stall_f;
+    logic stall_d;
+    logic flush_d;
+    logic flush_e;
+
     hazard_unit hazard_unit_inst (
         .i_e_rs1(e_rs1),
         .i_e_rs2(e_rs2),
@@ -12,18 +17,34 @@ module core (
         .i_w_rd(w_rd),
         .i_w_reg_wen(w_reg_wen),
         .o_rs1_fwd(e_rs1_fwd),
-        .o_rs2_fwd(e_rs2_fwd)
+        .o_rs2_fwd(e_rs2_fwd),
+
+        .i_e_jmp_en(e_jmp_en),
+        .i_e_has_load(e_res_src == 2'b01),
+        .i_e_rd(e_rd),
+        .i_d_rs1(d_rs1),
+        .i_d_rs2(d_rs2),
+
+        .o_stall_f(stall_f),
+        .o_stall_d(stall_d),
+        .o_flush_d(flush_d),
+        .o_flush_e(flush_e)
     );
 
     /* -- FETCH -- */
 
     logic [31:0] f_pc;
+    logic [31:0] f_pc_plus_4;
     logic [31:0] f_inst;
 
     program_counter pc (
         .i_clk,
         .i_rst,
-        .o_pc(f_pc)
+        .i_en(!stall_f),
+        .i_jmp_en(e_jmp_en),
+        .i_jmp_addr(e_jmp_addr),
+        .o_pc(f_pc),
+        .o_pc_plus_4(f_pc_plus_4)
     );
 
     word_memory inst_mem (
@@ -37,11 +58,27 @@ module core (
     );
 
     always_ff @(posedge i_clk) begin
-        d_inst <= f_inst;
+        if (i_rst || flush_d) begin
+            d_pc <= 0;
+            d_pc_plus_4 <= 0;
+            d_inst <= 0;
+        end
+        else if (stall_d) begin
+            d_pc <= d_pc;
+            d_pc_plus_4 <= d_pc_plus_4;
+            d_inst <= d_inst;
+        end
+        else begin
+            d_pc <= f_pc;
+            d_pc_plus_4 <= f_pc_plus_4;
+            d_inst <= f_inst;
+        end
     end
 
     /* -- DECODE -- */
 
+    logic [31:0] d_pc;
+    logic [31:0] d_pc_plus_4;
     logic [31:0] d_inst;
 
     logic [6:0] d_opcode;
@@ -57,6 +94,8 @@ module core (
     logic d_mem_wen;
     logic d_alu_src;
     logic [1:0] d_res_src;
+    logic d_branch_addr_src;
+    logic [2:0] d_branch_cond;
 
     logic [31:0] d_rs1_data;
     logic [31:0] d_rs2_data;
@@ -80,7 +119,9 @@ module core (
         .o_reg_wen(d_reg_wen),
         .o_mem_wen(d_mem_wen),
         .o_alu_src(d_alu_src),
-        .o_res_src(d_res_src)
+        .o_res_src(d_res_src),
+        .o_branch_addr_src(d_branch_addr_src),
+        .o_branch_cond(d_branch_cond)
     );
 
     register_file regs (
@@ -96,26 +137,57 @@ module core (
     );
 
     always_ff @(posedge i_clk) begin
-        e_alu_op <= d_alu_op;
-        e_reg_wen <= d_reg_wen;
-        e_mem_wen <= d_mem_wen;
-        e_alu_src <= d_alu_src;
-        e_res_src <= d_res_src;
-        e_rs1 <= d_rs1;
-        e_rs2 <= d_rs2;
-        e_rd <= d_rd;
-        e_imm <= d_imm;
-        e_rs1_data <= d_rs1_data;
-        e_rs2_data <= d_rs2_data;
+        if (i_rst || flush_e) begin
+            e_pc <= 0;
+            e_pc_plus_4 <= 0;
+            e_alu_op <= 0;
+            e_reg_wen <= 0;
+            e_mem_wen <= 0;
+            e_alu_src <= 0;
+            e_res_src <= 0;
+            e_branch_addr_src <= 0;
+            e_branch_cond <= BRANCH_NEVER;
+            e_rs1 <= 0;
+            e_rs2 <= 0;
+            e_rd <= 0;
+            e_imm <= 0;
+            e_rs1_data <= 0;
+            e_rs2_data <= 0;
+        end
+        else begin
+            e_pc <= d_pc;
+            e_pc_plus_4 <= d_pc_plus_4;
+            e_alu_op <= d_alu_op;
+            e_reg_wen <= d_reg_wen;
+            e_mem_wen <= d_mem_wen;
+            e_alu_src <= d_alu_src;
+            e_res_src <= d_res_src;
+            e_branch_addr_src <= d_branch_addr_src;
+            e_branch_cond <= d_branch_cond;
+            e_rs1 <= d_rs1;
+            e_rs2 <= d_rs2;
+            e_rd <= d_rd;
+            e_imm <= d_imm;
+            e_rs1_data <= d_rs1_data;
+            e_rs2_data <= d_rs2_data;
+        end
     end
 
     /* -- EXECUTE -- */
+
+    logic e_stall;
+    logic e_jmp_flush;
+
+    logic [31:0] e_pc;
+    logic [31:0] e_pc_plus_4;
 
     logic [3:0] e_alu_op;
     logic e_reg_wen;
     logic e_mem_wen;
     logic e_alu_src;
     logic [1:0] e_res_src;
+    logic e_branch_addr_src;
+    logic [2:0] e_branch_cond;
     logic [4:0] e_rd;
     logic [4:0] e_rs1;
     logic [4:0] e_rs2;
@@ -130,6 +202,12 @@ module core (
 
     logic [31:0] e_alu_b;
     logic [31:0] e_alu_res;
+    logic e_alu_eq;
+    logic e_alu_lt;
+    logic e_alu_ltu;
+
+    logic e_jmp_en;
+    logic [31:0] e_jmp_addr;
 
     always_comb begin
         case (e_rs1_fwd)
@@ -144,26 +222,58 @@ module core (
             default: e_real_rs2_data = e_rs2_data;
         endcase
     end
+
     assign e_alu_b = e_alu_src ? e_imm : e_real_rs2_data;
 
     alu alu_inst (
         .i_op(e_alu_op),
         .i_a(e_real_rs1_data),
         .i_b(e_alu_b),
-        .o_res(e_alu_res)
+        .o_res(e_alu_res),
+        .o_eq(e_alu_eq),
+        .o_lt(e_alu_lt),
+        .o_ltu(e_alu_ltu)
     );
 
+    always_comb begin
+        case (e_branch_cond)
+            BRANCH_NEVER: e_jmp_en = 0;
+            BRANCH_ALWAYS: e_jmp_en = 1;
+            BRANCH_EQ: e_jmp_en = e_alu_eq;
+            BRANCH_NE: e_jmp_en = !e_alu_eq;
+            BRANCH_LT: e_jmp_en = e_alu_lt;
+            BRANCH_GE: e_jmp_en = !e_alu_lt;
+            BRANCH_LTU: e_jmp_en = e_alu_ltu;
+            BRANCH_GEU: e_jmp_en = !e_alu_ltu;
+        endcase
+    end
+
+    assign e_jmp_addr = e_branch_addr_src ? e_alu_res : (e_pc + e_imm);
+
     always_ff @(posedge i_clk) begin
-        m_reg_wen <= e_reg_wen;
-        m_mem_wen <= e_mem_wen;
-        m_res_src <= e_res_src;
-        m_rd <= e_rd;
-        m_alu_res <= e_alu_res;
-        m_mem_wdata <= e_real_rs2_data;
+        if (i_rst) begin
+            m_pc_plus_4 <= 0;
+            m_reg_wen <= 0;
+            m_mem_wen <= 0;
+            m_res_src <= 0;
+            m_rd <= 0;
+            m_alu_res <= 0;
+            m_mem_wdata <= 0;
+        end
+        else begin
+            m_pc_plus_4 <= e_pc_plus_4;
+            m_reg_wen <= e_reg_wen;
+            m_mem_wen <= e_mem_wen;
+            m_res_src <= e_res_src;
+            m_rd <= e_rd;
+            m_alu_res <= e_alu_res;
+            m_mem_wdata <= e_real_rs2_data;
+        end
     end
 
     /* -- MEMORY -- */
 
+    logic [31:0] m_pc_plus_4;
     logic m_reg_wen;
     logic m_mem_wen;
     logic [1:0] m_res_src;
@@ -184,15 +294,25 @@ module core (
     );
 
     always_ff @(posedge i_clk) begin
-        w_reg_wen <= m_reg_wen;
-        w_res_src <= m_res_src;
-        w_rd <= m_rd;
-        w_alu_res <= m_alu_res;
-        w_mem_rdata <= m_mem_rdata;
+        if (i_rst) begin
+            w_reg_wen <= 0;
+            w_res_src <= 0;
+            w_rd <= 0;
+            w_alu_res <= 0;
+            w_mem_rdata <= 0;
+        end
+        else begin
+            w_reg_wen <= m_reg_wen;
+            w_res_src <= m_res_src;
+            w_rd <= m_rd;
+            w_alu_res <= m_alu_res;
+            w_mem_rdata <= m_mem_rdata;
+        end
     end
 
     /* -- WRITEBACK -- */
 
+    logic [31:0] w_pc_plus_4;
     logic w_reg_wen;
     logic [1:0] w_res_src;
     logic [4:0] w_rd;
@@ -205,7 +325,7 @@ module core (
         case (w_res_src)
             2'b00: w_result = w_alu_res;
             2'b01: w_result = w_mem_rdata;
-            2'b10: w_result = 0; // TODO: assign pc
+            2'b10: w_result = w_pc_plus_4; // TODO: assign pc
             2'b11: w_result = 0;
         endcase
     end

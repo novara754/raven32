@@ -1,10 +1,12 @@
-addi x1, x0, 10
-addi x2, x0, 5
-add x3, x1, x2
-add x4, x1, x3
-add x5, x4, x3
-nop
-nop
-nop
-nop
-nop
+    jal x1, a
+    addi x2, x0, 0x123
+a:
+    addi x1, x0, 10
+    beq x1, x1, b
+    addi x2, x0, 0x321
+b:
+    addi x4, x0, 5
+    beq x2, x4, c
+    addi x5, x0, 123
+c:
+    nop

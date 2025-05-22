@@ -1,13 +1,13 @@
 `default_nettype none
 
 module hazard_unit (
+    // -- W/M -> E FORWARDING --
     input [4:0] i_e_rs1,
     input [4:0] i_e_rs2,
     input [4:0] i_m_rd,
     input i_m_reg_wen,
     input [4:0] i_w_rd,
     input i_w_reg_wen,
-
     // 00 = no forwarding
     // 01 = forward from MEMORY
     // 10 = forward from WRITEBACK
@@ -15,7 +15,19 @@ module hazard_unit (
     // 00 = no forwarding
     // 01 = forward from MEMORY
     // 10 = forward from WRITEBACK
-    output logic [1:0] o_rs2_fwd
+    output logic [1:0] o_rs2_fwd,
+
+    // -- LOAD STALL --
+    input i_e_jmp_en,
+    input i_e_has_load,
+    input [4:0] i_e_rd,
+    input [4:0] i_d_rs1,
+    input [4:0] i_d_rs2,
+
+    output logic o_stall_f,
+    output logic o_stall_d,
+    output logic o_flush_d,
+    output logic o_flush_e
 );
 
     always_comb begin
@@ -33,5 +45,13 @@ module hazard_unit (
         else
             o_rs2_fwd = 2'b00;
     end
+
+    logic load_stall;
+    assign load_stall = i_e_has_load && ((i_d_rs1 == i_e_rd) | (i_d_rs2 == i_e_rd));
+
+    assign o_stall_f = load_stall;
+    assign o_stall_d = load_stall;
+    assign o_flush_d = i_e_jmp_en;
+    assign o_flush_e = load_stall || i_e_jmp_en;
 
 endmodule

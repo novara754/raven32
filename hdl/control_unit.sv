@@ -16,10 +16,16 @@ module control_unit (
     // 00 = write alu res to rd
     // 01 = write mem data to rd
     // 10 = write pc to rd
-    output logic [1:0] o_res_src
+    output logic [1:0] o_res_src,
+
+    // 0 = pc + imm
+    // 1 = rs1 + imm
+    output logic o_branch_addr_src,
+    output logic [2:0] o_branch_cond
 );
 
     always_comb begin
+        o_branch_cond = BRANCH_NEVER;
         o_alu_op = 0;
         o_reg_wen = 0;
         o_mem_wen = 0;
@@ -50,12 +56,17 @@ module control_unit (
                 o_alu_src = 1;
             end
             OPCODE_BRANCH: begin
+                o_branch_cond = i_funct3;
             end
             OPCODE_JALR: begin
+                o_alu_op = ALU_ADD;
+                o_branch_cond = BRANCH_ALWAYS;
                 o_reg_wen = 1;
                 o_res_src = 2'b10;
             end
             OPCODE_JAL: begin
+                o_branch_cond = BRANCH_ALWAYS;
+                o_reg_wen = 1;
                 o_res_src = 2'b10;
             end
             OPCODE_OP_IMM: begin
