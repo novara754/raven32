@@ -16,6 +16,7 @@ enum logic [6:0] {
 } t_opcode;
 
 enum logic [3:0] {
+    ALU_PASSTHROUGH_B,
     ALU_ADD,
     ALU_SUB,
     ALU_XOR,

@@ -15,6 +15,7 @@ module alu (
 
     always_comb begin
         case (i_op)
+            ALU_PASSTHROUGH_B: o_res = i_b;
             ALU_ADD: o_res = i_a + i_b;
             ALU_SUB: o_res = i_a - i_b;
             ALU_XOR: o_res = i_a ^ i_b;

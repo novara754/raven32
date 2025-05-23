@@ -92,7 +92,8 @@ module core (
     logic [3:0] d_alu_op;
     logic d_reg_wen;
     logic d_mem_wen;
-    logic d_alu_src;
+    logic d_alu_a_src;
+    logic d_alu_b_src;
     logic [1:0] d_res_src;
     logic d_branch_addr_src;
     logic [2:0] d_branch_cond;
@@ -118,7 +119,8 @@ module core (
         .o_alu_op(d_alu_op),
         .o_reg_wen(d_reg_wen),
         .o_mem_wen(d_mem_wen),
-        .o_alu_src(d_alu_src),
+        .o_alu_a_src(d_alu_a_src),
+        .o_alu_b_src(d_alu_b_src),
         .o_res_src(d_res_src),
         .o_branch_addr_src(d_branch_addr_src),
         .o_branch_cond(d_branch_cond)
@@ -143,7 +145,8 @@ module core (
             e_alu_op <= 0;
             e_reg_wen <= 0;
             e_mem_wen <= 0;
-            e_alu_src <= 0;
+            e_alu_a_src <= 0;
+            e_alu_b_src <= 0;
             e_res_src <= 0;
             e_branch_addr_src <= 0;
             e_branch_cond <= BRANCH_NEVER;
@@ -160,7 +163,8 @@ module core (
             e_alu_op <= d_alu_op;
             e_reg_wen <= d_reg_wen;
             e_mem_wen <= d_mem_wen;
-            e_alu_src <= d_alu_src;
+            e_alu_a_src <= d_alu_a_src;
+            e_alu_b_src <= d_alu_b_src;
             e_res_src <= d_res_src;
             e_branch_addr_src <= d_branch_addr_src;
             e_branch_cond <= d_branch_cond;
@@ -184,7 +188,8 @@ module core (
     logic [3:0] e_alu_op;
     logic e_reg_wen;
     logic e_mem_wen;
-    logic e_alu_src;
+    logic e_alu_a_src;
+    logic e_alu_b_src;
     logic [1:0] e_res_src;
     logic e_branch_addr_src;
     logic [2:0] e_branch_cond;
@@ -200,6 +205,7 @@ module core (
     logic [31:0] e_real_rs1_data;
     logic [31:0] e_real_rs2_data;
 
+    logic [31:0] e_alu_a;
     logic [31:0] e_alu_b;
     logic [31:0] e_alu_res;
     logic e_alu_eq;
@@ -223,11 +229,12 @@ module core (
         endcase
     end
 
-    assign e_alu_b = e_alu_src ? e_imm : e_real_rs2_data;
+    assign e_alu_a = e_alu_a_src ? e_pc : e_real_rs1_data;
+    assign e_alu_b = e_alu_b_src ? e_imm : e_real_rs2_data;
 
     alu alu_inst (
         .i_op(e_alu_op),
-        .i_a(e_real_rs1_data),
+        .i_a(e_alu_a),
         .i_b(e_alu_b),
         .o_res(e_alu_res),
         .o_eq(e_alu_eq),
