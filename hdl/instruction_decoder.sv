@@ -13,7 +13,9 @@ module instruction_decoder (
 
     output logic [4:0] o_rd,
     output logic [4:0] o_rs1,
-    output logic [4:0] o_rs2
+    output logic [4:0] o_rs2,
+
+    output logic o_ebreak
 );
 
     assign o_opcode = i_inst[6:0];
@@ -44,5 +46,7 @@ module instruction_decoder (
             default: o_imm = 0;
         endcase
     end
+
+    assign o_ebreak = i_inst == 32'b00000000000100000000000001110011;
 
 endmodule

@@ -1,8 +1,12 @@
 `default_nettype none
 
-module core (
+module core #(
+    parameter MEM_DEPTH = 1024
+) (
     input i_clk,
-    input i_rst
+    input i_rst,
+
+    output logic o_ebreak
 );
     logic stall_f;
     logic stall_d;
@@ -47,7 +51,9 @@ module core (
         .o_pc_plus_4(f_pc_plus_4)
     );
 
-    word_memory inst_mem (
+    word_memory #(
+        .DEPTH(MEM_DEPTH)
+    ) inst_mem (
         .i_clk,
         .i_rst(1'b0),
         .i_wen(1'b0),
@@ -88,9 +94,11 @@ module core (
     logic [4:0] d_rd;
     logic [4:0] d_rs1;
     logic [4:0] d_rs2;
+    logic d_ebreak;
 
     logic [3:0] d_alu_op;
     logic d_reg_wen;
+    logic d_mem_rwidth;
     logic d_mem_wen;
     logic d_alu_a_src;
     logic d_alu_b_src;
@@ -109,7 +117,8 @@ module core (
         .o_imm(d_imm),
         .o_rd(d_rd),
         .o_rs1(d_rs1),
-        .o_rs2(d_rs2)
+        .o_rs2(d_rs2),
+        .o_ebreak(d_ebreak)
     );
 
     control_unit ctrl_unit (
@@ -118,6 +127,7 @@ module core (
         .i_funct7(d_funct7),
         .o_alu_op(d_alu_op),
         .o_reg_wen(d_reg_wen),
+        .o_mem_rwidth(d_mem_rwidth),
         .o_mem_wen(d_mem_wen),
         .o_alu_a_src(d_alu_a_src),
         .o_alu_b_src(d_alu_b_src),
@@ -141,9 +151,10 @@ module core (
     always_ff @(posedge i_clk) begin
         if (i_rst || flush_e) begin
             e_pc <= 0;
-            e_pc_plus_4 <= 0;
+            e_pc_plus_4 <= d_pc_plus_4;
             e_alu_op <= 0;
             e_reg_wen <= 0;
+            e_mem_rwidth <= 0;
             e_mem_wen <= 0;
             e_alu_a_src <= 0;
             e_alu_b_src <= 0;
@@ -152,6 +163,7 @@ module core (
             e_branch_cond <= BRANCH_NEVER;
             e_rs1 <= 0;
             e_rs2 <= 0;
+            e_ebreak <= 0;
             e_rd <= 0;
             e_imm <= 0;
             e_rs1_data <= 0;
@@ -162,6 +174,7 @@ module core (
             e_pc_plus_4 <= d_pc_plus_4;
             e_alu_op <= d_alu_op;
             e_reg_wen <= d_reg_wen;
+            e_mem_rwidth <= d_mem_rwidth;
             e_mem_wen <= d_mem_wen;
             e_alu_a_src <= d_alu_a_src;
             e_alu_b_src <= d_alu_b_src;
@@ -170,6 +183,7 @@ module core (
             e_branch_cond <= d_branch_cond;
             e_rs1 <= d_rs1;
             e_rs2 <= d_rs2;
+            e_ebreak <= d_ebreak;
             e_rd <= d_rd;
             e_imm <= d_imm;
             e_rs1_data <= d_rs1_data;
@@ -187,6 +201,7 @@ module core (
 
     logic [3:0] e_alu_op;
     logic e_reg_wen;
+    logic e_mem_rwidth;
     logic e_mem_wen;
     logic e_alu_a_src;
     logic e_alu_b_src;
@@ -196,6 +211,7 @@ module core (
     logic [4:0] e_rd;
     logic [4:0] e_rs1;
     logic [4:0] e_rs2;
+    logic e_ebreak;
     logic [31:0] e_imm;
     logic [31:0] e_rs1_data;
     logic [31:0] e_rs2_data;
@@ -262,19 +278,23 @@ module core (
             m_pc_plus_4 <= 0;
             m_reg_wen <= 0;
             m_mem_wen <= 0;
+            m_mem_rwidth <= 0;
             m_res_src <= 0;
             m_rd <= 0;
             m_alu_res <= 0;
             m_mem_wdata <= 0;
+            m_ebreak <= 0;
         end
         else begin
             m_pc_plus_4 <= e_pc_plus_4;
             m_reg_wen <= e_reg_wen;
+            m_mem_rwidth <= e_mem_rwidth;
             m_mem_wen <= e_mem_wen;
             m_res_src <= e_res_src;
             m_rd <= e_rd;
             m_alu_res <= e_alu_res;
             m_mem_wdata <= e_real_rs2_data;
+            m_ebreak <= e_ebreak;
         end
     end
 
@@ -283,20 +303,25 @@ module core (
     logic [31:0] m_pc_plus_4;
     logic m_reg_wen;
     logic m_mem_wen;
+    logic m_mem_rwidth;
     logic [1:0] m_res_src;
     logic [4:0] m_rd;
     logic [31:0] m_alu_res;
     logic [31:0] m_mem_wdata;
+    logic m_ebreak;
 
     logic [31:0] m_mem_rdata;
 
-    word_memory data_mem (
+    ram #(
+        .DEPTH(MEM_DEPTH)
+    ) data_mem (
         .i_clk,
-        .i_rst,
+        .i_rst(1'b0),
         .i_wen(m_mem_wen),
         .i_waddr(m_alu_res),
         .i_wdata(m_mem_wdata),
         .i_raddr(m_alu_res),
+        .i_rwidth(m_mem_rwidth),
         .o_rdata(m_mem_rdata)
     );
 
@@ -307,6 +332,8 @@ module core (
             w_rd <= 0;
             w_alu_res <= 0;
             w_mem_rdata <= 0;
+            w_ebreak <= 0;
+            w_pc_plus_4 <= 0;
         end
         else begin
             w_reg_wen <= m_reg_wen;
@@ -314,6 +341,8 @@ module core (
             w_rd <= m_rd;
             w_alu_res <= m_alu_res;
             w_mem_rdata <= m_mem_rdata;
+            w_ebreak <= m_ebreak;
+            w_pc_plus_4 <= m_pc_plus_4;
         end
     end
 
@@ -325,6 +354,7 @@ module core (
     logic [4:0] w_rd;
     logic [31:0] w_alu_res;
     logic [31:0] w_mem_rdata;
+    logic w_ebreak;
 
     logic [31:0] w_result;
 
@@ -332,9 +362,11 @@ module core (
         case (w_res_src)
             2'b00: w_result = w_alu_res;
             2'b01: w_result = w_mem_rdata;
-            2'b10: w_result = w_pc_plus_4; // TODO: assign pc
+            2'b10: w_result = w_pc_plus_4;
             2'b11: w_result = 0;
         endcase
     end
+
+    assign o_ebreak = w_ebreak;
 
 endmodule

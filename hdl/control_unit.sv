@@ -9,6 +9,7 @@ module control_unit (
 
     output logic [3:0] o_alu_op,
     output logic o_reg_wen,
+    output logic o_mem_rwidth,
     output logic o_mem_wen,
     // 0 = use rs1 as a
     // 1 = use pc as a
@@ -28,16 +29,18 @@ module control_unit (
 );
 
     always_comb begin
+        o_branch_addr_src = 0;
         o_branch_cond = BRANCH_NEVER;
         o_alu_op = 0;
         o_reg_wen = 0;
+        o_mem_rwidth = 0;
         o_mem_wen = 0;
         o_alu_a_src = 0;
         o_alu_b_src = 0;
         o_res_src = 0;
 
         case (i_funct3)
-            3'b000: o_alu_op = i_funct7[5] ? ALU_SUB : ALU_ADD;
+            3'b000: o_alu_op = (i_opcode == OPCODE_OP && i_funct7[5]) ? ALU_SUB : ALU_ADD;
             3'b001: o_alu_op = ALU_SLL;
             3'b101: o_alu_op = i_funct7[5] ? ALU_SRA : ALU_SRL;
             3'b010: o_alu_op = ALU_SLT;
@@ -53,6 +56,10 @@ module control_unit (
                 o_reg_wen = 1;
                 o_alu_b_src = 1;
                 o_res_src = 2'b01;
+                case (i_funct3)
+                    3'b000: o_mem_rwidth = 0;
+                    default: o_mem_rwidth = 1;
+                endcase
             end
             OPCODE_STORE: begin
                 o_alu_op = ALU_ADD;
@@ -64,6 +71,8 @@ module control_unit (
             end
             OPCODE_JALR: begin
                 o_alu_op = ALU_ADD;
+                o_alu_b_src = 1;
+                o_branch_addr_src = 1;
                 o_branch_cond = BRANCH_ALWAYS;
                 o_reg_wen = 1;
                 o_res_src = 2'b10;

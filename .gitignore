@@ -1,0 +1,5 @@
+tests/*.o
+tests/*.elf
+tests/*.bin
+tests/*.hex
+tests/*.d

@@ -25,7 +25,7 @@ module alu (
             ALU_SLTU: o_res = {31'b0, i_a < i_b};
             ALU_SLL: o_res = i_a << {27'b0, i_b[4:0]};
             ALU_SRL: o_res = i_a >> {27'b0, i_b[4:0]};
-            ALU_SRA: o_res = i_a >>> {27'b0, i_b[4:0]};
+            ALU_SRA: o_res = $signed(i_a) >>> {27'b0, i_b[4:0]};
             default: o_res = 0;
         endcase
     end

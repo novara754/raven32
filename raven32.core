@@ -13,6 +13,7 @@ filesets:
       - hdl/program_counter.sv
       - hdl/register_file.sv
       - hdl/word_memory.sv
+      - hdl/ram.sv
     file_type: systemVerilogSource
 
   tb:
@@ -36,5 +37,5 @@ targets:
 
 parameters:
   firmware:
-    datatype: str
+    datatype: file
     paramtype: plusarg
