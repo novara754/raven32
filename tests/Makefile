@@ -26,8 +26,8 @@ firmware.elf: linker.ld start.o $(TEST_OBJS)
 firmware.bin: firmware.elf
 	$(OBJCOPY) -O binary $< $@
 
-firmware.hex: firmware.bin bin2hex.py
-	python3 bin2hex.py $<
+firmware.hex: firmware.bin ../scripts/bin2hex.py
+	python3 ../scripts/bin2hex.py $<
 
 firmware.d: firmware.elf
 	$(OBJDUMP) -M numeric -d $< > $@
