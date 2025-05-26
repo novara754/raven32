@@ -11,9 +11,13 @@ module ram #(
     input [31:0] i_wdata,
 
     input [31:0] i_raddr,
-    // 0 = byte
-    // 1 = word
-    input i_rwidth,
+    // 00 = byte
+    // 01 = half-word
+    // 10 = word
+    input [1:0] i_rwidth,
+    // 0 = unsigned
+    // 1 = signed
+    input i_rsigned,
 
     output logic [31:0] o_rdata
 );
@@ -35,13 +39,36 @@ module ram #(
 
     always_comb begin
         case (i_rwidth)
-            1'b0: case (i_raddr[1:0])
-                2'b00: o_rdata = {{24{rdata[7]}}, rdata[7:0]};
-                2'b01: o_rdata = {{24{rdata[15]}}, rdata[15:8]};
-                2'b10: o_rdata = {{24{rdata[23]}}, rdata[23:16]};
-                2'b11: o_rdata = {{24{rdata[31]}}, rdata[31:24]};
-            endcase
-            1'b1: o_rdata = rdata;
+            2'b00: if (i_rsigned) begin
+                case (i_raddr[1:0])
+                    2'b00: o_rdata = {{24{rdata[7]}}, rdata[7:0]};
+                    2'b01: o_rdata = {{24{rdata[15]}}, rdata[15:8]};
+                    2'b10: o_rdata = {{24{rdata[23]}}, rdata[23:16]};
+                    2'b11: o_rdata = {{24{rdata[31]}}, rdata[31:24]};
+                endcase
+            end
+            else begin
+                case (i_raddr[1:0])
+                    2'b00: o_rdata = {24'b0, rdata[7:0]};
+                    2'b01: o_rdata = {24'b0, rdata[15:8]};
+                    2'b10: o_rdata = {24'b0, rdata[23:16]};
+                    2'b11: o_rdata = {24'b0, rdata[31:24]};
+                endcase
+            end
+
+            2'b01: if (i_rsigned) begin
+                if (!i_raddr[1]) o_rdata = {{16{rdata[15]}}, rdata[15:0]};
+                else o_rdata = {{16{rdata[31]}}, rdata[31:16]};
+            end
+            else begin
+                if (!i_raddr[1]) o_rdata = {16'b0, rdata[15:0]};
+                else o_rdata = {16'b0, rdata[31:16]};
+            end
+
+            2'b10: o_rdata = rdata;
+
+            default: begin
+            end
         endcase
     end
 

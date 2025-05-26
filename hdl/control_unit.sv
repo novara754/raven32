@@ -9,7 +9,11 @@ module control_unit (
 
     output logic [3:0] o_alu_op,
     output logic o_reg_wen,
-    output logic o_mem_rwidth,
+    // 00 = byte
+    // 01 = half-word
+    // 10 = word
+    output logic [1:0] o_mem_rwidth,
+    output logic o_mem_rsigned,
     output logic o_mem_wen,
     // 0 = use rs1 as a
     // 1 = use pc as a
@@ -34,6 +38,7 @@ module control_unit (
         o_alu_op = 0;
         o_reg_wen = 0;
         o_mem_rwidth = 0;
+        o_mem_rsigned = 0;
         o_mem_wen = 0;
         o_alu_a_src = 0;
         o_alu_b_src = 0;
@@ -57,8 +62,28 @@ module control_unit (
                 o_alu_b_src = 1;
                 o_res_src = 2'b01;
                 case (i_funct3)
-                    3'b000: o_mem_rwidth = 0;
-                    default: o_mem_rwidth = 1;
+                    3'b000: begin
+                        o_mem_rwidth = 2'b00;
+                        o_mem_rsigned = 1;
+                    end
+                    3'b001: begin
+                        o_mem_rwidth = 2'b01;
+                        o_mem_rsigned = 1;
+                    end
+                    3'b010: begin
+                        o_mem_rwidth = 2'b10;
+                        o_mem_rsigned = 0;
+                    end
+                    3'b100: begin
+                        o_mem_rwidth = 2'b00;
+                        o_mem_rsigned = 0;
+                    end
+                    3'b101: begin
+                        o_mem_rwidth = 2'b01;
+                        o_mem_rsigned = 0;
+                    end
+                    default: begin
+                    end
                 endcase
             end
             OPCODE_STORE: begin

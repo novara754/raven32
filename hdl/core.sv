@@ -98,7 +98,8 @@ module core #(
 
     logic [3:0] d_alu_op;
     logic d_reg_wen;
-    logic d_mem_rwidth;
+    logic [1:0] d_mem_rwidth;
+    logic d_mem_rsigned;
     logic d_mem_wen;
     logic d_alu_a_src;
     logic d_alu_b_src;
@@ -128,6 +129,7 @@ module core #(
         .o_alu_op(d_alu_op),
         .o_reg_wen(d_reg_wen),
         .o_mem_rwidth(d_mem_rwidth),
+        .o_mem_rsigned(d_mem_rsigned),
         .o_mem_wen(d_mem_wen),
         .o_alu_a_src(d_alu_a_src),
         .o_alu_b_src(d_alu_b_src),
@@ -155,6 +157,7 @@ module core #(
             e_alu_op <= 0;
             e_reg_wen <= 0;
             e_mem_rwidth <= 0;
+            e_mem_rsigned <= 0;
             e_mem_wen <= 0;
             e_alu_a_src <= 0;
             e_alu_b_src <= 0;
@@ -175,6 +178,7 @@ module core #(
             e_alu_op <= d_alu_op;
             e_reg_wen <= d_reg_wen;
             e_mem_rwidth <= d_mem_rwidth;
+            e_mem_rsigned <= d_mem_rsigned;
             e_mem_wen <= d_mem_wen;
             e_alu_a_src <= d_alu_a_src;
             e_alu_b_src <= d_alu_b_src;
@@ -201,7 +205,8 @@ module core #(
 
     logic [3:0] e_alu_op;
     logic e_reg_wen;
-    logic e_mem_rwidth;
+    logic [1:0] e_mem_rwidth;
+    logic e_mem_rsigned;
     logic e_mem_wen;
     logic e_alu_a_src;
     logic e_alu_b_src;
@@ -279,6 +284,7 @@ module core #(
             m_reg_wen <= 0;
             m_mem_wen <= 0;
             m_mem_rwidth <= 0;
+            m_mem_rsigned <= 0;
             m_res_src <= 0;
             m_rd <= 0;
             m_alu_res <= 0;
@@ -289,6 +295,7 @@ module core #(
             m_pc_plus_4 <= e_pc_plus_4;
             m_reg_wen <= e_reg_wen;
             m_mem_rwidth <= e_mem_rwidth;
+            m_mem_rsigned <= e_mem_rsigned;
             m_mem_wen <= e_mem_wen;
             m_res_src <= e_res_src;
             m_rd <= e_rd;
@@ -303,7 +310,8 @@ module core #(
     logic [31:0] m_pc_plus_4;
     logic m_reg_wen;
     logic m_mem_wen;
-    logic m_mem_rwidth;
+    logic [1:0] m_mem_rwidth;
+    logic m_mem_rsigned;
     logic [1:0] m_res_src;
     logic [4:0] m_rd;
     logic [31:0] m_alu_res;
@@ -322,6 +330,7 @@ module core #(
         .i_wdata(m_mem_wdata),
         .i_raddr(m_alu_res),
         .i_rwidth(m_mem_rwidth),
+        .i_rsigned(m_mem_rsigned),
         .o_rdata(m_mem_rdata)
     );
 
