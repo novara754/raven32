@@ -41,7 +41,8 @@ _start:
 
     ebreak
 
-.section .data
+.section .bss
+.align 4
 stack_bottom:
 .skip 4096
 stack_top:

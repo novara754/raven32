@@ -1,39 +1,79 @@
 CAPI=2:
-name: ::raven32:1.1.1
+name: ::raven32:0.0
 
 filesets:
-  rtl:
+  core:
     files:
-      - hdl/defs.sv
-      - hdl/hazard_unit.sv
-      - hdl/alu.sv
-      - hdl/control_unit.sv
-      - hdl/core.sv
-      - hdl/instruction_decoder.sv
-      - hdl/program_counter.sv
-      - hdl/register_file.sv
-      - hdl/word_memory.sv
-      - hdl/ram.sv
+      - rtl/defs.sv
+      - rtl/hazard_unit.sv
+      - rtl/alu.sv
+      - rtl/control_unit.sv
+      - rtl/core.sv
+      - rtl/instruction_decoder.sv
+      - rtl/program_counter.sv
+      - rtl/register_file.sv
+      - rtl/word_memory.sv
+      - rtl/ram.sv
     file_type: systemVerilogSource
 
-  tb:
+  top:
+    files:
+      - rtl/top.sv
+      - rtl/uart_tx.sv
+      - rtl/fifo.sv
+    file_type: systemVerilogSource
+
+  core_tb:
     files:
       - tb/core_tb.sv
     file_type: systemVerilogSource
     depend: [vlog_tb_utils]
 
+  top_tb:
+    files:
+      - tb/top_tb.sv
+    file_type: systemVerilogSource
+    depend: [vlog_tb_utils]
+
+  firmware:
+    files: [firmware/hello.hex : {file_type : user, copyto : firmware.hex}]
+
+  basys3:
+    files:
+      - basys3/constraints.xdc
+    file_type: xdc
+
 targets:
-  sim:
+  default:
+    filesets: [core]
+
+  core_tb:
+    filesets: [core, core_tb]
     default_tool: verilator
-    filesets: [rtl, tb]
     tools:
-      icarus:
-        iverilog_options: [-g2012]
       verilator:
         verilator_options: [--binary, -j, "0", --trace, --timescale, 1ns/1ns]
     toplevel: core_tb
     parameters:
       - firmware
+
+  top_tb:
+    filesets: [top, core, top_tb]
+    default_tool: verilator
+    tools:
+      verilator:
+        verilator_options: [--binary, -j, "0", --trace, --timescale, 1ns/1ns]
+    toplevel: top_tb
+    parameters:
+      - firmware
+
+  basys3:
+    default_tool: vivado
+    filesets: [top, core, firmware, basys3]
+    tools:
+      vivado:
+        part: xc7a35tcpg236-1
+    toplevel: top
 
 parameters:
   firmware:

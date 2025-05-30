@@ -16,6 +16,7 @@ fn puts(s: &[u8]) {
 #[no_mangle]
 extern "C" fn main() {
     puts(b"Hello, world!");
+    loop {}
 }
 
 #[panic_handler]

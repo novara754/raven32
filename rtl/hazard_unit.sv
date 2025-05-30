@@ -1,13 +1,13 @@
 `default_nettype none
 
 module hazard_unit (
-    // -- W/M -> E FORWARDING --
-    input [4:0] i_e_rs1,
-    input [4:0] i_e_rs2,
-    input [4:0] i_m_rd,
-    input i_m_reg_wen,
-    input [4:0] i_w_rd,
-    input i_w_reg_wen,
+    /* -- W/M -> E FORWARDING -- */
+    input wire [4:0] i_e_rs1,
+    input wire [4:0] i_e_rs2,
+    input wire [4:0] i_m_rd,
+    input wire i_m_reg_wen,
+    input wire [4:0] i_w_rd,
+    input wire i_w_reg_wen,
     // 00 = no forwarding
     // 01 = forward from MEMORY
     // 10 = forward from WRITEBACK
@@ -18,11 +18,11 @@ module hazard_unit (
     output logic [1:0] o_rs2_fwd,
 
     // -- LOAD STALL --
-    input i_e_jmp_en,
-    input i_e_has_load,
-    input [4:0] i_e_rd,
-    input [4:0] i_d_rs1,
-    input [4:0] i_d_rs2,
+    input wire i_e_jmp_en,
+    input wire i_e_has_load,
+    input wire [4:0] i_e_rd,
+    input wire [4:0] i_d_rs1,
+    input wire [4:0] i_d_rs2,
 
     output logic o_stall_f,
     output logic o_stall_d,

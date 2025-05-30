@@ -12,7 +12,7 @@ $ make
 
 To run tests
 ```
-$ fusesoc run --target=sim ::raven32:1.1.1 --vcd --firmware="path/to/tests/firmware.hex"
+$ fusesoc run --target=core_tb ::raven32:0.0 --vcd --firmware="path/to/tests/firmware.hex"
 ```
 
 ## License

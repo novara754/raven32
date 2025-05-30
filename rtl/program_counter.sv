@@ -1,11 +1,11 @@
 `default_nettype none
 
 module program_counter (
-    input i_clk,
-    input i_rst,
-    input i_en,
-    input i_jmp_en,
-    input [31:0] i_jmp_addr,
+    input wire i_clk,
+    input wire i_rst,
+    input wire i_en,
+    input wire i_jmp_en,
+    input wire [31:0] i_jmp_addr,
     output logic [31:0] o_pc,
     output logic [31:0] o_pc_plus_4
 );

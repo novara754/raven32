@@ -3,9 +3,9 @@
 import defs::*;
 
 module alu (
-    input [3:0] i_op,
-    input [31:0] i_a,
-    input [31:0] i_b,
+    input wire [3:0] i_op,
+    input wire [31:0] i_a,
+    input wire [31:0] i_b,
     output logic [31:0] o_res,
 
     output logic o_eq,

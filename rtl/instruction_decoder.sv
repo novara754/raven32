@@ -3,7 +3,7 @@
 import defs::*;
 
 module instruction_decoder (
-    input [31:0] i_inst,
+    input wire [31:0] i_inst,
 
     output logic [6:0] o_opcode,
     output logic [2:0] o_funct3,

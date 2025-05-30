@@ -3,9 +3,12 @@
 import defs::*;
 
 module control_unit (
-    input [6:0] i_opcode,
-    input [2:0] i_funct3,
-    input [6:0] i_funct7,
+    input wire [6:0] i_opcode,
+    input wire [2:0] i_funct3,
+    // warns about not all bits being used
+    /* verilator lint_off UNUSEDSIGNAL */
+    input wire [6:0] i_funct7,
+    /* verilator lint_on UNUSEDSIGNAL */
 
     output logic [3:0] o_alu_op,
     output logic o_reg_wen,

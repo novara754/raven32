@@ -3,85 +3,22 @@
 module core #(
     parameter MEM_DEPTH = 1024
 ) (
-    input i_clk,
-    input i_rst,
+    input wire i_clk,
+    input wire i_rst,
 
-    output logic o_ebreak
+    output logic o_ebreak,
+
+    output logic o_uart_en,
+    output logic [7:0] o_uart_data
 );
     logic stall_f;
     logic stall_d;
     logic flush_d;
     logic flush_e;
 
-    hazard_unit hazard_unit_inst (
-        .i_e_rs1(e_rs1),
-        .i_e_rs2(e_rs2),
-        .i_m_rd(m_rd),
-        .i_m_reg_wen(m_reg_wen),
-        .i_w_rd(w_rd),
-        .i_w_reg_wen(w_reg_wen),
-        .o_rs1_fwd(e_rs1_fwd),
-        .o_rs2_fwd(e_rs2_fwd),
-
-        .i_e_jmp_en(e_jmp_en),
-        .i_e_has_load(e_res_src == 2'b01),
-        .i_e_rd(e_rd),
-        .i_d_rs1(d_rs1),
-        .i_d_rs2(d_rs2),
-
-        .o_stall_f(stall_f),
-        .o_stall_d(stall_d),
-        .o_flush_d(flush_d),
-        .o_flush_e(flush_e)
-    );
-
-    /* -- FETCH -- */
-
     logic [31:0] f_pc;
     logic [31:0] f_pc_plus_4;
     logic [31:0] f_inst;
-
-    program_counter pc (
-        .i_clk,
-        .i_rst,
-        .i_en(!stall_f),
-        .i_jmp_en(e_jmp_en),
-        .i_jmp_addr(e_jmp_addr),
-        .o_pc(f_pc),
-        .o_pc_plus_4(f_pc_plus_4)
-    );
-
-    word_memory #(
-        .DEPTH(MEM_DEPTH)
-    ) inst_mem (
-        .i_clk,
-        .i_rst(1'b0),
-        .i_wen(1'b0),
-        .i_waddr(32'b0),
-        .i_wdata(32'b0),
-        .i_raddr(f_pc),
-        .o_rdata(f_inst)
-    );
-
-    always_ff @(posedge i_clk) begin
-        if (i_rst || flush_d) begin
-            d_pc <= 0;
-            d_pc_plus_4 <= 0;
-            d_inst <= 0;
-        end
-        else if (stall_d) begin
-            d_pc <= d_pc;
-            d_pc_plus_4 <= d_pc_plus_4;
-            d_inst <= d_inst;
-        end
-        else begin
-            d_pc <= f_pc;
-            d_pc_plus_4 <= f_pc_plus_4;
-            d_inst <= f_inst;
-        end
-    end
-
-    /* -- DECODE -- */
 
     logic [31:0] d_pc;
     logic [31:0] d_pc_plus_4;
@@ -109,6 +46,130 @@ module core #(
 
     logic [31:0] d_rs1_data;
     logic [31:0] d_rs2_data;
+
+    logic [31:0] e_pc;
+    logic [31:0] e_pc_plus_4;
+
+    logic [3:0] e_alu_op;
+    logic e_reg_wen;
+    logic [1:0] e_mem_rwidth;
+    logic e_mem_rsigned;
+    logic e_mem_wen;
+    logic e_alu_a_src;
+    logic e_alu_b_src;
+    logic [1:0] e_res_src;
+    logic e_branch_addr_src;
+    logic [2:0] e_branch_cond;
+    logic [4:0] e_rd;
+    logic [4:0] e_rs1;
+    logic [4:0] e_rs2;
+    logic e_ebreak;
+    logic [31:0] e_imm;
+    logic [31:0] e_rs1_data;
+    logic [31:0] e_rs2_data;
+
+    logic [1:0] e_rs1_fwd;
+    logic [1:0] e_rs2_fwd;
+    logic [31:0] e_real_rs1_data;
+    logic [31:0] e_real_rs2_data;
+
+    logic [31:0] e_alu_a;
+    logic [31:0] e_alu_b;
+    logic [31:0] e_alu_res;
+    logic e_alu_eq;
+    logic e_alu_lt;
+    logic e_alu_ltu;
+
+    logic e_jmp_en;
+    logic [31:0] e_jmp_addr;
+
+    logic [31:0] m_pc_plus_4;
+    logic m_reg_wen;
+    logic m_mem_wen;
+    logic [1:0] m_mem_rwidth;
+    logic m_mem_rsigned;
+    logic [1:0] m_res_src;
+    logic [4:0] m_rd;
+    logic [31:0] m_alu_res;
+    logic [31:0] m_mem_wdata;
+    logic m_ebreak;
+
+    logic [31:0] m_mem_rdata;
+
+    logic [31:0] w_pc_plus_4;
+    logic w_reg_wen;
+    logic [1:0] w_res_src;
+    logic [4:0] w_rd;
+    logic [31:0] w_alu_res;
+    logic [31:0] w_mem_rdata;
+    logic w_ebreak;
+
+    logic [31:0] w_result;
+
+    hazard_unit hazard_unit_inst (
+        .i_e_rs1(e_rs1),
+        .i_e_rs2(e_rs2),
+        .i_m_rd(m_rd),
+        .i_m_reg_wen(m_reg_wen),
+        .i_w_rd(w_rd),
+        .i_w_reg_wen(w_reg_wen),
+        .o_rs1_fwd(e_rs1_fwd),
+        .o_rs2_fwd(e_rs2_fwd),
+
+        .i_e_jmp_en(e_jmp_en),
+        .i_e_has_load(e_res_src == 2'b01),
+        .i_e_rd(e_rd),
+        .i_d_rs1(d_rs1),
+        .i_d_rs2(d_rs2),
+
+        .o_stall_f(stall_f),
+        .o_stall_d(stall_d),
+        .o_flush_d(flush_d),
+        .o_flush_e(flush_e)
+    );
+
+    /* -- FETCH -- */
+
+    program_counter pc (
+        .i_clk,
+        .i_rst,
+        .i_en(!stall_f),
+        .i_jmp_en(e_jmp_en),
+        .i_jmp_addr(e_jmp_addr),
+        .o_pc(f_pc),
+        .o_pc_plus_4(f_pc_plus_4)
+    );
+
+    word_memory #(
+        .DEPTH(MEM_DEPTH)
+    ) inst_mem (
+        .i_clk,
+        .i_wen(1'b0),
+        .i_waddr(32'b0),
+        .i_wdata(32'b0),
+        .i_raddr(f_pc),
+        .o_rdata(f_inst)
+    );
+
+    always_ff @(posedge i_clk) begin
+        if (i_rst || flush_d) begin
+            d_pc <= 0;
+            d_pc_plus_4 <= 0;
+            d_inst <= 0;
+        end
+        else if (stall_d) begin
+            d_pc <= d_pc;
+            d_pc_plus_4 <= d_pc_plus_4;
+            d_inst <= d_inst;
+        end
+        else begin
+            d_pc <= f_pc;
+            d_pc_plus_4 <= f_pc_plus_4;
+            d_inst <= f_inst;
+        end
+    end
+
+    /* -- DECODE -- */
 
     instruction_decoder inst_decoder (
         .i_inst(d_inst),
@@ -140,7 +201,6 @@ module core #(
 
     register_file regs (
         .i_clk,
-        .i_rst,
         .i_wen(w_reg_wen),
         .i_waddr(w_rd),
         .i_wdata(w_result),
@@ -196,45 +256,6 @@ module core #(
     end
 
     /* -- EXECUTE -- */
-
-    logic e_stall;
-    logic e_jmp_flush;
-
-    logic [31:0] e_pc;
-    logic [31:0] e_pc_plus_4;
-
-    logic [3:0] e_alu_op;
-    logic e_reg_wen;
-    logic [1:0] e_mem_rwidth;
-    logic e_mem_rsigned;
-    logic e_mem_wen;
-    logic e_alu_a_src;
-    logic e_alu_b_src;
-    logic [1:0] e_res_src;
-    logic e_branch_addr_src;
-    logic [2:0] e_branch_cond;
-    logic [4:0] e_rd;
-    logic [4:0] e_rs1;
-    logic [4:0] e_rs2;
-    logic e_ebreak;
-    logic [31:0] e_imm;
-    logic [31:0] e_rs1_data;
-    logic [31:0] e_rs2_data;
-
-    logic [1:0] e_rs1_fwd;
-    logic [1:0] e_rs2_fwd;
-    logic [31:0] e_real_rs1_data;
-    logic [31:0] e_real_rs2_data;
-
-    logic [31:0] e_alu_a;
-    logic [31:0] e_alu_b;
-    logic [31:0] e_alu_res;
-    logic e_alu_eq;
-    logic e_alu_lt;
-    logic e_alu_ltu;
-
-    logic e_jmp_en;
-    logic [31:0] e_jmp_addr;
 
     always_comb begin
         case (e_rs1_fwd)
@@ -307,24 +328,10 @@ module core #(
 
     /* -- MEMORY -- */
 
-    logic [31:0] m_pc_plus_4;
-    logic m_reg_wen;
-    logic m_mem_wen;
-    logic [1:0] m_mem_rwidth;
-    logic m_mem_rsigned;
-    logic [1:0] m_res_src;
-    logic [4:0] m_rd;
-    logic [31:0] m_alu_res;
-    logic [31:0] m_mem_wdata;
-    logic m_ebreak;
-
-    logic [31:0] m_mem_rdata;
-
     ram #(
         .DEPTH(MEM_DEPTH)
     ) data_mem (
         .i_clk,
-        .i_rst(1'b0),
         .i_wen(m_mem_wen),
         .i_waddr(m_alu_res),
         .i_wdata(m_mem_wdata),
@@ -333,6 +340,11 @@ module core #(
         .i_rsigned(m_mem_rsigned),
         .o_rdata(m_mem_rdata)
     );
+
+    always_comb begin
+        o_uart_en = m_alu_res == 32'h10000000;
+        o_uart_data = m_mem_wdata[7:0];
+    end
 
     always_ff @(posedge i_clk) begin
         if (i_rst) begin
@@ -356,16 +368,6 @@ module core #(
     end
 
     /* -- WRITEBACK -- */
-
-    logic [31:0] w_pc_plus_4;
-    logic w_reg_wen;
-    logic [1:0] w_res_src;
-    logic [4:0] w_rd;
-    logic [31:0] w_alu_res;
-    logic [31:0] w_mem_rdata;
-    logic w_ebreak;
-
-    logic [31:0] w_result;
 
     always_comb begin
         case (w_res_src)

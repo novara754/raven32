@@ -10,7 +10,9 @@ module core_tb;
     ) dut (
         .i_clk(clk),
         .i_rst(rst),
-        .o_ebreak(ebreak)
+        .o_ebreak(ebreak),
+        .o_uart_en(),
+        .o_uart_data()
     );
 
     logic [1024:0] firmware;
